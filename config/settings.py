@@ -40,6 +40,9 @@ INSTALLED_APPS = [
 
     'core.apps.CoreConfig',
     'users.apps.UsersConfig',
+    'organization.apps.OrganizationConfig',
+    'warehouse.apps.WarehouseConfig',
+    'procurement.apps.ProcurementConfig',
 ]
 
 MIDDLEWARE = [
