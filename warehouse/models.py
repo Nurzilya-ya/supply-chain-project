@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.db.models import Q
 
 class Warehouse(models.Model):
 
@@ -57,3 +57,58 @@ class Material(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.code})"
+
+class Stock(models.Model):
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.CASCADE,
+        related_name='stocks',
+        verbose_name='Склад',
+    )
+    material = models.ForeignKey(
+        Material,
+        on_delete=models.CASCADE,
+        related_name='stocks',
+        verbose_name='Материал',
+    )
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        default=0,
+        verbose_name='Физический остаток',
+    )
+    reserved_quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        default=0,
+        verbose_name='Зарезервировано',
+    )
+
+    class Meta:
+        verbose_name = 'Складской остаток'
+        verbose_name_plural = 'Складские остатки'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['warehouse', 'material'],
+                name='unique_stock_per_warehouse_material',
+            ),
+            models.CheckConstraint(
+                condition=Q(quantity__gte=0),
+                name='stock_quantity_non_negative',
+            ),
+            models.CheckConstraint(
+                condition=Q(reserved_quantity__gte=0),
+                name='stock_reserved_non_negative',
+            ),
+            models.CheckConstraint(
+                condition=Q(reserved_quantity__lte=models.F('quantity')),
+                name='stock_reserved_not_greater_than_quantity',
+            ),
+        ]
+
+    @property
+    def available_quantity(self):
+        return self.quantity - self.reserved_quantity
+
+    def __str__(self):
+        return f"{self.material.name} @ {self.warehouse.name}: {self.quantity}"
