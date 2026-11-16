@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Мои заявки{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Мои заявки</h2>
+    <!-- Кнопку создания заявки сделаем на следующем шаге -->
+    <button class="btn btn-success" disabled>+ Создать заявку (скоро)</button>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        {% if requests %}
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>№</th>
+                        <th>Дата создания</th>
+                        <th>Объект</th>
+                        <th>Требуемая дата</th>
+                        <th>Статус</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in requests %}
+                    <tr>
+                        <td>{{ req.id }}</td>
+                        <td>{{ req.created_at|date:"d.m.Y H:i" }}</td>
+                        <td>{{ req.production_site.name }}</td>
+                        <td>{{ req.required_date|date:"d.m.Y" }}</td>
+                        <td>
+                            <!-- Красивые бейджи для статусов -->
+                            {% if req.status == 'draft' %}
+                                <span class="badge bg-secondary">Черновик</span>
+                            {% elif req.status == 'submitted' %}
+                                <span class="badge bg-warning text-dark">На рассмотрении</span>
+                            {% elif req.status == 'approved' %}
+                                <span class="badge bg-success">Согласована</span>
+                            {% elif req.status == 'rejected' %}
+                                <span class="badge bg-danger">Отклонена</span>
+                            {% else %}
+                                <span class="badge bg-info">{{ req.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="text-muted text-center my-4">У вас пока нет заявок.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -22,7 +22,29 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/">Главная</a>
                     </li>
-                    <!-- Сюда позже добавим ссылки на заявки, склады и т.д. -->
+
+                    {% if user.is_authenticated %}
+                        <!-- Для сотрудников и всех остальных (показываем свои заявки) -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'my_requests' %}">Мои заявки</a>
+                        </li>
+
+                        <!-- Для снабженцев и админов: показываем "Заявки на рассмотрение" -->
+                        {% for group in user.groups.all %}
+                            {% if group.name == 'Supply Specialists' %}
+                                <li class="nav-item">
+                                    <a class="nav-link text-warning" href="{% url 'supply_requests' %}">Заявки на рассмотрение</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        <!-- Если это админ, тоже дадим ему ссылку -->
+                        {% if user.is_superuser %}
+                            <li class="nav-item">
+                                <a class="nav-link text-warning" href="{% url 'supply_requests' %}">Заявки на рассмотрение (Админ)</a>
+                            </li>
+                        {% endif %}
+                    {% endif %}
                 </ul>
                 <ul class="navbar-nav">
                     {% if user.is_authenticated %}
