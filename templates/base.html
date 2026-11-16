@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}МТО Нефтегаз{% endblock %}</title>
+    <!-- Подключаем Bootstrap 5 через CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .navbar-brand { font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <!-- Навигационная панель -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="/">Система МТО</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Главная</a>
+                    </li>
+                    <!-- Сюда позже добавим ссылки на заявки, склады и т.д. -->
+                </ul>
+                <ul class="navbar-nav">
+                    {% if user.is_authenticated %}
+                        <!-- Если пользователь вошел -->
+                        <li class="nav-item">
+                            <span class="nav-link text-light fw-bold">👤 {{ user.username }}</span>
+                        </li>
+                        <li class="nav-item">
+                            <!-- Выход по правилам Django делается через POST-запрос -->
+                            <form method="post" action="{% url 'logout' %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-link nav-link text-warning">Выйти</button>
+                            </form>
+                        </li>
+                        {% if user.is_staff %}
+                            <li class="nav-item">
+                                <a class="nav-link text-info" href="/admin/" target="_blank">Админка</a>
+                            </li>
+                        {% endif %}
+                    {% else %}
+                        <!-- Если пользователь гость -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'login' %}">Войти</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Основной контент страницы -->
+    <div class="container">
+        {% block content %}
+        <!-- Сюда будет вставляться содержимое конкретных страниц -->
+        {% endblock %}
+    </div>
+
+    <!-- Подключаем JS Bootstrap (нужен для выпадающих меню и т.д.) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
