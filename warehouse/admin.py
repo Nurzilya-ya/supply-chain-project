@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Warehouse, Material, Stock
+from .models import Warehouse, Material, Stock, StockTransaction
 
 
 admin.site.register(Warehouse)
@@ -20,3 +20,10 @@ class StockAdmin(admin.ModelAdmin):
     def available_quantity(self, obj):
         return obj.available_quantity
     available_quantity.short_description = 'Доступно'
+
+@admin.register(StockTransaction)
+class StockTransactionAdmin(admin.ModelAdmin):
+    list_display = ('created_at', 'transaction_type', 'material', 'quantity', 'warehouse', 'created_by')
+    list_filter = ('transaction_type', 'warehouse', 'created_at')
+    search_fields = ('material__name', 'material__code', 'comment')
+    readonly_fields = ('created_at',)

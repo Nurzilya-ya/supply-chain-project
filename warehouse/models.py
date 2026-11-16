@@ -1,5 +1,6 @@
 from django.db import models
 from django.db.models import Q
+from django.conf import settings
 
 class Warehouse(models.Model):
 
@@ -112,3 +113,83 @@ class Stock(models.Model):
 
     def __str__(self):
         return f"{self.material.name} @ {self.warehouse.name}: {self.quantity}"
+
+class StockTransaction(models.Model):
+    TRANSACTION_TYPES = [
+        ('receipt', 'Приход (поставка)'),
+        ('issue', 'Расход (выдача)'),
+        ('write_off', 'Списание'),
+        ('transfer', 'Перемещение'),
+    ]
+
+    transaction_type = models.CharField(
+        max_length=20,
+        choices=TRANSACTION_TYPES,
+        verbose_name='Тип операции',
+    )
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.PROTECT,
+        related_name='transactions',
+        verbose_name='Склад (основной)',
+        help_text='Для прихода и перемещения — откуда или куда'
+    )
+    destination_warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='incoming_transactions',
+        verbose_name='Склад-получатель (только для перемещения)',
+    )
+    material = models.ForeignKey(
+        Material,
+        on_delete=models.PROTECT,
+        related_name='transactions',
+        verbose_name='Материал',
+    )
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        verbose_name='Количество',
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='stock_transactions',
+        verbose_name='Автор операции',
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата операции',
+    )
+    comment = models.TextField(
+        blank=True,
+        verbose_name='Комментарий / основание',
+    )
+    request_item = models.ForeignKey(
+        'procurement.RequestItem',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='stock_transactions',
+        verbose_name='Строка заявки',
+        help_text='Если операция выполнена по заявке'
+    )
+    procurement_order_item = models.ForeignKey(
+        'procurement.ProcurementOrderItem',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='stock_transactions',
+        verbose_name='Строка заказа на закупку',
+        help_text='Если операция выполнена по заказу'
+    )
+
+    class Meta:
+        verbose_name = 'Складская операция'
+        verbose_name_plural = 'Складские операции'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.get_transaction_type_display()}: {self.material.name} x {self.quantity}"
