@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Создание заявки{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Новая заявка на материалы</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Вывод общих ошибок формы -->
+                    {% if form.non_field_errors or formset.non_form_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                            {{ formset.non_form_errors }}
+                        </div>
+                    {% endif %}
+
+                    <!-- ШАПКА ЗАЯВКИ -->
+                    <h5 class="border-bottom pb-2 mb-3">1. Общая информация</h5>
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <label class="form-label">Назначение заявки (причина)</label>
+                            {{ form.purpose }}
+                            {% if form.purpose.errors %}<div class="text-danger small">{{ form.purpose.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Требуемая дата поставки</label>
+                            {{ form.required_date }}
+                            {% if form.required_date.errors %}<div class="text-danger small">{{ form.required_date.errors }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <!-- МАТЕРИАЛЫ -->
+                    <h5 class="border-bottom pb-2 mb-3">2. Необходимые материалы</h5>
+                    
+                    <!-- Менеджмент формсета (скрытые поля для Django) -->
+                    {{ formset.management_form }}
+                    
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Материал</th>
+                                <th style="width: 200px;">Количество</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item_form in formset %}
+                            <tr>
+                                <!-- Скрытые поля для строки -->
+                                {% for hidden in item_form.hidden_fields %}
+                                    {{ hidden }}
+                                {% endfor %}
+                                
+                                <td>
+                                    {{ item_form.material }}
+                                    {% if item_form.material.errors %}<div class="text-danger small">{{ item_form.material.errors }}</div>{% endif %}
+                                </td>
+                                <td>
+                                    {{ item_form.quantity }}
+                                    {% if item_form.quantity.errors %}<div class="text-danger small">{{ item_form.quantity.errors }}</div>{% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'my_requests' %}" class="btn btn-secondary">Отмена</a>
+                        <button type="submit" class="btn btn-primary">Сохранить черновик</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Заявка №{{ request_obj.id }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Заявка №{{ request_obj.id }}</h2>
+            <a href="{% url 'my_requests' %}" class="btn btn-secondary">Назад к списку</a>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-dark text-white d-flex justify-content-between">
+                <span>Статус: 
+                    {% if request_obj.status == 'draft' %}<span class="badge bg-secondary">Черновик</span>{% endif %}
+                    {% if request_obj.status == 'submitted' %}<span class="badge bg-warning text-dark">На рассмотрении</span>{% endif %}
+                    {% if request_obj.status == 'approved' %}<span class="badge bg-success">Согласована</span>{% endif %}
+                </span>
+                <span>Автор: {{ request_obj.created_by.username }}</span>
+            </div>
+            <div class="card-body">
+                <p><strong>Объект:</strong> {{ request_obj.production_site.name }}</p>
+                <p><strong>Требуется к дате:</strong> {{ request_obj.required_date|date:"d.m.Y" }}</p>
+                <p><strong>Назначение:</strong> {{ request_obj.purpose }}</p>
+            </div>
+        </div>
+
+        <h4 class="mb-3">Материалы</h4>
+        <table class="table table-bordered mb-4">
+            <thead class="table-light">
+                <tr>
+                    <th>Код</th>
+                    <th>Материал</th>
+                    <th>Количество</th>
+                    <th>Зарезервировано</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in request_obj.items.all %}
+                <tr>
+                    <td>{{ item.material.code }}</td>
+                    <td>{{ item.material.name }}</td>
+                    <td>{{ item.quantity }} {{ item.material.get_unit_display }}</td>
+                    <td>{{ item.reserved_quantity }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Кнопка отправки -->
+        {% if request_obj.status == 'draft' and request_obj.created_by == user %}
+            <div class="alert alert-info">
+                Эта заявка находится в статусе черновика. Проверьте состав материалов и отправьте ее в снабжение.
+            </div>
+            <form method="post" action="{% url 'request_submit' request_obj.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success btn-lg w-100">Отправить в снабжение</button>
+            </form>
+        {% endif %}
+        
+    </div>
+</div>
+{% endblock %}

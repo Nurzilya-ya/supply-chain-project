@@ -5,8 +5,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Мои заявки</h2>
-    <!-- Кнопку создания заявки сделаем на следующем шаге -->
-    <button class="btn btn-success" disabled>+ Создать заявку (скоро)</button>
+    <a href="{% url 'request_create' %}" class="btn btn-success">+ Создать заявку</a>
 </div>
 
 <div class="card shadow-sm">
@@ -20,6 +19,7 @@
                         <th>Объект</th>
                         <th>Требуемая дата</th>
                         <th>Статус</th>
+                        <th>Действия</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -42,6 +42,9 @@
                             {% else %}
                                 <span class="badge bg-info">{{ req.get_status_display }}</span>
                             {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'request_detail' req.pk %}" class="btn btn-sm btn-outline-primary">Открыть</a>
                         </td>
                     </tr>
                     {% endfor %}
