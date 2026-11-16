@@ -18,31 +18,41 @@
         <div class="container">
             <a class="navbar-brand" href="/">Система МТО</a>
             <div class="collapse navbar-collapse">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/">Главная</a>
-                    </li>
+                 <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="/">Главная</a></li>
 
                     {% if user.is_authenticated %}
-                        <!-- Для сотрудников и всех остальных (показываем свои заявки) -->
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'my_requests' %}">Мои заявки</a>
-                        </li>
+                        <!-- Доступно всем: Мои заявки -->
+                        <li class="nav-item"><a class="nav-link" href="{% url 'my_requests' %}">Мои заявки</a></li>
 
-                        <!-- Для снабженцев и админов: показываем "Заявки на рассмотрение" -->
+                        <!-- Доступно Снабженцам: Заявки на рассмотрение -->
+                        {% if user.is_superuser or 'Supply Specialists' in user.groups.all|stringformat:"s" or user.groups.all %}
+                            {% for group in user.groups.all %}
+                                {% if group.name == 'Supply Specialists' %}
+                                    <li class="nav-item"><a class="nav-link text-warning" href="{% url 'supply_requests' %}">Заявки на рассмотрение</a></li>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+
+                        <!-- Доступно Снабженцам И Кладовщикам: Складские остатки -->
                         {% for group in user.groups.all %}
-                            {% if group.name == 'Supply Specialists' %}
-                                <li class="nav-item">
-                                    <a class="nav-link text-warning" href="{% url 'supply_requests' %}">Заявки на рассмотрение</a>
-                                </li>
+                            {% if group.name == 'Warehouse Staff' or group.name == 'Supply Specialists' %}
+                                <li class="nav-item"><a class="nav-link text-info" href="{% url 'warehouse_stocks' %}">Склад</a></li>
                             {% endif %}
                         {% endfor %}
 
-                        <!-- Если это админ, тоже дадим ему ссылку -->
+                        <!-- Доступно Руководителям: Аналитика -->
+                        {% for group in user.groups.all %}
+                            {% if group.name == 'Managers' %}
+                                <li class="nav-item"><a class="nav-link text-success" href="{% url 'analytics_dashboard' %}">Аналитика</a></li>
+                            {% endif %}
+                        {% endfor %}
+
+                        <!-- Если это админ, ему доступно всё -->
                         {% if user.is_superuser %}
-                            <li class="nav-item">
-                                <a class="nav-link text-warning" href="{% url 'supply_requests' %}">Заявки на рассмотрение (Админ)</a>
-                            </li>
+                            <li class="nav-item"><a class="nav-link text-warning" href="{% url 'supply_requests' %}">Снабжение</a></li>
+                            <li class="nav-item"><a class="nav-link text-info" href="{% url 'warehouse_stocks' %}">Склад</a></li>
+                            <li class="nav-item"><a class="nav-link text-success" href="{% url 'analytics_dashboard' %}">Аналитика</a></li>
                         {% endif %}
                     {% endif %}
                 </ul>
