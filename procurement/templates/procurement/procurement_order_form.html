@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Создание заказа на закупку{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-11">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-dark text-white">
+                <h4 class="mb-0">Новый заказ на закупку</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    {% if form.errors or formset.non_form_errors %}
+                        <div class="alert alert-danger">Пожалуйста, исправьте ошибки в форме.</div>
+                    {% endif %}
+
+                    <h5 class="border-bottom pb-2 mb-3">1. Реквизиты заказа</h5>
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label">Поставщик</label>
+                            {{ form.supplier }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Склад назначения</label>
+                            {{ form.warehouse }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Ожидаемая дата</label>
+                            {{ form.expected_delivery_date }}
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Комментарий</label>
+                        {{ form.comment }}
+                    </div>
+
+                    <h5 class="border-bottom pb-2 mb-3">2. Состав заказа</h5>
+                    {{ formset.management_form }}
+                    
+                    <table class="table table-bordered align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Материал</th>
+                                <th style="width: 120px;">Кол-во</th>
+                                <th style="width: 150px;">Цена за ед.</th>
+                                <th>Привязка к заявке (если для дефицита)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item_form in formset %}
+                            <tr>
+                                {% for hidden in item_form.hidden_fields %} {{ hidden }} {% endfor %}
+                                <td>{{ item_form.material }}</td>
+                                <td>{{ item_form.quantity }}</td>
+                                <td>{{ item_form.unit_price }}</td>
+                                <td>{{ item_form.request_item }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'procurement_orders' %}" class="btn btn-secondary">Отмена</a>
+                        <button type="submit" class="btn btn-success">Оформить заказ</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

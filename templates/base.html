@@ -30,6 +30,8 @@
                             {% for group in user.groups.all %}
                                 {% if group.name == 'Supply Specialists' %}
                                     <li class="nav-item"><a class="nav-link text-warning" href="{% url 'supply_requests' %}">Заявки на рассмотрение</a></li>
+                                    <li class="nav-item"><a class="nav-link text-warning" href="{% url 'approved_requests' %}">Заявки в работе</a></li>
+                                    <li class="nav-item"><a class="nav-link" href="{% url 'procurement_orders' %}">Закупки</a></li>
                                 {% endif %}
                             {% endfor %}
                         {% endif %}
@@ -51,6 +53,7 @@
                         <!-- Если это админ, ему доступно всё -->
                         {% if user.is_superuser %}
                             <li class="nav-item"><a class="nav-link text-warning" href="{% url 'supply_requests' %}">Снабжение</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{% url 'procurement_orders' %}">Закупки</a></li>
                             <li class="nav-item"><a class="nav-link text-info" href="{% url 'warehouse_stocks' %}">Склад</a></li>
                             <li class="nav-item"><a class="nav-link text-success" href="{% url 'analytics_dashboard' %}">Аналитика</a></li>
                         {% endif %}

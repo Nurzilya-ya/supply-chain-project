@@ -1,12 +1,17 @@
 from django.views.generic import ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
-from django.views.generic import CreateView
+from django.views.generic import CreateView, UpdateView
 from django.contrib import messages
 from .forms import MaterialRequestForm, RequestItemFormSet
+from .forms import ProcurementOrderForm, ProcurementOrderItemFormSet
 from .models import MaterialRequest
 from django.shortcuts import redirect
 from django.views import View
+from warehouse.models import Warehouse
+from django.shortcuts import get_object_or_404
+from .models import ProcurementOrder
+
 
 class MyRequestsListView(LoginRequiredMixin, ListView):
     model = MaterialRequest
@@ -105,3 +110,193 @@ class SubmitRequestView(LoginRequiredMixin, View):
             messages.success(request, f'Заявка №{req.id} успешно отправлена в снабжение!')
 
         return redirect('request_detail', pk=req.pk)
+
+#Supplier
+# 1. Просмотр заявки снабженцем (с выбором склада)
+class SupplyRequestDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
+    model = MaterialRequest
+    template_name = 'procurement/supply_request_detail.html'
+    context_object_name = 'request_obj'
+
+    def test_func(self):
+        user = self.request.user
+        return user.is_superuser or user.groups.filter(name='Supply Specialists').exists()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Передаем список всех складов для выпадающего списка
+        context['warehouses'] = Warehouse.objects.filter(is_active=True)
+        return context
+
+
+# 2. Согласование заявки
+class ApproveRequestView(LoginRequiredMixin, UserPassesTestMixin, View):
+    def test_func(self):
+        user = self.request.user
+        return user.is_superuser or user.groups.filter(name='Supply Specialists').exists()
+
+    def post(self, request, pk):
+        req = get_object_or_404(MaterialRequest, pk=pk)
+
+        if req.status not in ['submitted', 'need_clarification']:
+            messages.error(request, 'Эту заявку нельзя согласовать в текущем статусе.')
+            return redirect('supply_requests')
+
+        warehouse_id = request.POST.get('warehouse')
+        if not warehouse_id:
+            messages.error(request, 'Пожалуйста, выберите склад для обеспечения заявки.')
+            return redirect('supply_request_detail', pk=req.pk)
+
+        req.warehouse = get_object_or_404(Warehouse, pk=warehouse_id)
+        req.status = 'approved'
+        req.save()
+
+        # ВЫЗЫВАЕМ НАШУ БИЗНЕС-ЛОГИКУ РЕЗЕРВИРОВАНИЯ!
+        deficits = req.reserve_stock()
+
+        if deficits:
+            msg = 'Заявка согласована, но обнаружился дефицит: '
+            for item, shortage in deficits:
+                msg += f'{item.material.name} (не хватает {shortage}), '
+            messages.warning(request, msg)
+        else:
+            messages.success(request, 'Заявка успешно согласована и полностью зарезервирована!')
+
+        return redirect('supply_requests')
+
+class ApprovedRequestsListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    model = MaterialRequest
+    template_name = 'procurement/approved_requests.html'
+    context_object_name = 'requests'
+
+    def test_func(self):
+        user = self.request.user
+        return user.is_superuser or user.groups.filter(name='Supply Specialists').exists()
+
+    def get_queryset(self):
+        # Показываем только согласованные заявки
+        return MaterialRequest.objects.filter(status='approved').order_by('-updated_at')
+
+# 3. Отклонение заявки
+class RejectRequestView(LoginRequiredMixin, UserPassesTestMixin, View):
+    def test_func(self):
+        user = self.request.user
+        return user.is_superuser or user.groups.filter(name='Supply Specialists').exists()
+
+    def post(self, request, pk):
+        req = get_object_or_404(MaterialRequest, pk=pk)
+        if req.status in ['submitted', 'need_clarification']:
+            req.status = 'rejected'
+            req.save()
+            messages.info(request, f'Заявка №{req.pk} отклонена.')
+        return redirect('supply_requests')
+
+class ProcurementOrderListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    model = ProcurementOrder
+    template_name = 'procurement/procurement_orders.html'
+    context_object_name = 'orders'
+
+    def test_func(self):
+        user = self.request.user
+        return user.is_superuser or user.groups.filter(name='Supply Specialists').exists()
+
+    def get_queryset(self):
+        return ProcurementOrder.objects.all().select_related('supplier', 'warehouse').order_by('-created_at')
+
+
+class ProcurementOrderCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+    model = ProcurementOrder
+    form_class = ProcurementOrderForm
+    template_name = 'procurement/procurement_order_form.html'
+    success_url = reverse_lazy('procurement_orders')
+
+    def test_func(self):
+        user = self.request.user
+        return user.is_superuser or user.groups.filter(name='Supply Specialists').exists()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['formset'] = ProcurementOrderItemFormSet()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        self.object = None
+        form = self.get_form()
+        formset = ProcurementOrderItemFormSet(self.request.POST)
+
+        if form.is_valid() and formset.is_valid():
+            return self.form_valid(form, formset)
+        else:
+            return self.form_invalid(form, formset)
+
+    def form_valid(self, form, formset):
+        # Заполняем скрытые поля
+        form.instance.created_by = self.request.user
+        form.instance.status = 'draft'  # Сразу ставим статус "Заказано поставщику"
+
+        self.object = form.save()
+
+        formset.instance = self.object
+        formset.save()
+
+        messages.success(self.request, f'Заказ {self.object.order_number} успешно создан!')
+        return super().form_valid(form)
+
+    def form_invalid(self, form, formset):
+        return self.render_to_response(
+            self.get_context_data(form=form, formset=formset)
+        )
+
+class ConfirmProcurementOrderView(LoginRequiredMixin, UserPassesTestMixin, View):
+    def test_func(self):
+        user = self.request.user
+        return user.is_superuser or user.groups.filter(name='Supply Specialists').exists()
+
+    def post(self, request, pk):
+        order = get_object_or_404(ProcurementOrder, pk=pk)
+        if order.status == 'draft':
+            order.status = 'ordered'
+            order.save()
+            messages.success(request, f'Заказ {order.order_number} отправлен поставщику!')
+        return redirect('procurement_orders')
+
+class ProcurementOrderUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = ProcurementOrder
+    form_class = ProcurementOrderForm
+    template_name = 'procurement/procurement_order_form.html' # Используем тот же шаблон!
+    success_url = reverse_lazy('procurement_orders')
+
+    def test_func(self):
+        user = self.request.user
+        return user.is_superuser or user.groups.filter(name='Supply Specialists').exists()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Передаем формсет, привязанный к текущему заказу
+        if self.request.POST:
+            context['formset'] = ProcurementOrderItemFormSet(self.request.POST, instance=self.object)
+        else:
+            context['formset'] = ProcurementOrderItemFormSet(instance=self.object)
+        return context
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        form = self.get_form()
+        formset = ProcurementOrderItemFormSet(self.request.POST, instance=self.object)
+
+        if form.is_valid() and formset.is_valid():
+            return self.form_valid(form, formset)
+        else:
+            return self.form_invalid(form, formset)
+
+    def form_valid(self, form, formset):
+        self.object = form.save()
+        formset.instance = self.object
+        formset.save()
+        messages.success(self.request, f'Заказ {self.object.order_number} обновлен.')
+        return super().form_valid(form)
+
+    def form_invalid(self, form, formset):
+        return self.render_to_response(
+            self.get_context_data(form=form, formset=formset)
+        )

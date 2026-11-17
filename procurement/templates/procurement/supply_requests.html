@@ -26,8 +26,8 @@
                         <td>{{ req.production_site.name }}</td>
                         <td>{{ req.required_date|date:"d.m.Y" }}</td>
                         <td>
-                            <!-- Кнопки согласования сделаем чуть позже -->
-                            <button class="btn btn-sm btn-outline-primary" disabled>Обработать</button>
+
+                            <a href="{% url 'supply_request_detail' req.pk %}" class="btn btn-sm btn-primary">Обработать</a>
                         </td>
                     </tr>
                     {% endfor %}

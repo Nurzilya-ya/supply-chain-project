@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Заявки в работе{% endblock %}
+{% block content %}
+<h2 class="mb-4">Согласованные заявки (в работе)</h2>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>№</th>
+                    <th>Объект</th>
+                    <th>Склад обеспечения</th>
+                    <th>Статус обеспечения</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in requests %}
+                <tr>
+                    <td>{{ req.id }}</td>
+                    <td>{{ req.production_site.name }}</td>
+                    <td>{{ req.warehouse.name }}</td>
+                    <td>
+                        <!-- Считаем, все ли зарезервировано -->
+                        {% with total_needed=0 total_reserved=0 %}
+                        <ul class="list-unstyled mb-0 small">
+                            {% for item in req.items.all %}
+                                <li>
+                                    {{ item.material.name }}: 
+                                    <span class="{% if item.reserved_quantity == item.quantity %}text-success{% else %}text-danger{% endif %}">
+                                        {{ item.reserved_quantity }} / {{ item.quantity }}
+                                    </span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        {% endwith %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

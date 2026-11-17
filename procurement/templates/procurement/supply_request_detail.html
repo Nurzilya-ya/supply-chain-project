@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}Обработка заявки №{{ request_obj.id }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Обработка заявки №{{ request_obj.id }}</h2>
+            <a href="{% url 'supply_requests' %}" class="btn btn-secondary">Назад к списку</a>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <p><strong>Автор:</strong> {{ request_obj.created_by.username }}</p>
+                <p><strong>Объект:</strong> {{ request_obj.production_site.name }}</p>
+                <p><strong>Требуется к дате:</strong> <span class="text-danger fw-bold">{{ request_obj.required_date|date:"d.m.Y" }}</span></p>
+                <p><strong>Назначение:</strong> {{ request_obj.purpose }}</p>
+            </div>
+        </div>
+
+        <h4 class="mb-3">Запрашиваемые материалы</h4>
+        <table class="table table-bordered mb-4">
+            <thead class="table-light">
+                <tr>
+                    <th>Материал</th>
+                    <th>Запрошено</th>
+                    <th>Доступно на складах</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in request_obj.items.all %}
+                <tr>
+                    <td>{{ item.material.name }} ({{ item.material.code }})</td>
+                    <td><strong>{{ item.quantity }} {{ item.material.get_unit_display }}</strong></td>
+                    <td>
+                        <!-- Показываем, сколько доступно на КАЖДОМ складе -->
+                        <ul class="list-unstyled mb-0 small">
+                            {% for stock in item.material.stocks.all %}
+                                {% if stock.quantity > 0 %}
+                                <li>
+                                    <span class="text-muted">{{ stock.warehouse.name }}:</span> 
+                                    <strong class="{% if stock.available_quantity >= item.quantity %}text-success{% else %}text-danger{% endif %}">
+                                        {{ stock.available_quantity }}
+                                    </strong>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Блок действий -->
+        <div class="card bg-light border-primary">
+            <div class="card-body">
+                <h5 class="card-title text-primary">Решение по заявке</h5>
+                <div class="row mt-3">
+                    <!-- Форма согласования -->
+                    <div class="col-md-8">
+                        <form method="post" action="{% url 'request_approve' request_obj.pk %}" class="d-flex align-items-center">
+                            {% csrf_token %}
+                            <label class="me-2 fw-bold text-nowrap">Склад обеспечения:</label>
+                            <select name="warehouse" class="form-select me-2" required>
+                                <option value="">-- Выберите склад --</option>
+                                {% for wh in warehouses %}
+                                    <option value="{{ wh.pk }}">{{ wh.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-success text-nowrap">Согласовать и зарезервировать</button>
+                        </form>
+                    </div>
+                    
+                    <!-- Форма отклонения -->
+                    <div class="col-md-4 text-end">
+                        <form method="post" action="{% url 'request_reject' request_obj.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger w-100">Отклонить заявку</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
