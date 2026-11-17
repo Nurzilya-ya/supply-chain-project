@@ -32,14 +32,16 @@
                                     <li class="nav-item"><a class="nav-link text-warning" href="{% url 'supply_requests' %}">Заявки на рассмотрение</a></li>
                                     <li class="nav-item"><a class="nav-link text-warning" href="{% url 'approved_requests' %}">Заявки в работе</a></li>
                                     <li class="nav-item"><a class="nav-link" href="{% url 'procurement_orders' %}">Закупки</a></li>
+                                    <li class="nav-item"><a class="nav-link text-info" href="{% url 'warehouse_stocks' %}">Склад</a></li>
                                 {% endif %}
                             {% endfor %}
                         {% endif %}
 
-                        <!-- Доступно Снабженцам И Кладовщикам: Складские остатки -->
+                        <!-- Доступно Кладовщикам: Складские остатки -->
                         {% for group in user.groups.all %}
-                            {% if group.name == 'Warehouse Staff' or group.name == 'Supply Specialists' %}
+                            {% if group.name == 'Warehouse Staff' %}
                                 <li class="nav-item"><a class="nav-link text-info" href="{% url 'warehouse_stocks' %}">Склад</a></li>
+                                <li class="nav-item"><a class="nav-link text-warning" href="{% url 'orders_to_receive' %}">Поставки</a></li>
                             {% endif %}
                         {% endfor %}
 
@@ -55,6 +57,7 @@
                             <li class="nav-item"><a class="nav-link text-warning" href="{% url 'supply_requests' %}">Снабжение</a></li>
                             <li class="nav-item"><a class="nav-link" href="{% url 'procurement_orders' %}">Закупки</a></li>
                             <li class="nav-item"><a class="nav-link text-info" href="{% url 'warehouse_stocks' %}">Склад</a></li>
+                            <li class="nav-item"><a class="nav-link text-warning" href="{% url 'orders_to_receive' %}">Поставки</a></li>
                             <li class="nav-item"><a class="nav-link text-success" href="{% url 'analytics_dashboard' %}">Аналитика</a></li>
                         {% endif %}
                     {% endif %}

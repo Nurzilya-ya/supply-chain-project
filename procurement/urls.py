@@ -12,6 +12,7 @@ urlpatterns = [
     path('supply-requests/<int:pk>/approve/', views.ApproveRequestView.as_view(), name='request_approve'),
     path('supply-requests/approved/', views.ApprovedRequestsListView.as_view(), name='approved_requests'),
     path('supply-requests/<int:pk>/reject/', views.RejectRequestView.as_view(), name='request_reject'),
+    path('supply-requests/<int:pk>/re-reserve/', views.ReReserveRequestView.as_view(), name='request_re_reserve'),
     path('procurement-orders/', views.ProcurementOrderListView.as_view(), name='procurement_orders'),
     path('procurement-orders/create/', views.ProcurementOrderCreateView.as_view(), name='procurement_order_create'),
     path('procurement-orders/<int:pk>/edit/', views.ProcurementOrderUpdateView.as_view(), name='procurement_order_edit'),

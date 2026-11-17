@@ -73,6 +73,10 @@ class MaterialRequest(models.Model):
     def __str__(self):
         return f"Заявка №{self.pk} от {self.created_by.username}"
 
+    @property
+    def has_deficit(self):
+        return any(item.reserved_quantity < item.quantity for item in self.items.all())
+
     def reserve_stock(self):
         if not self.warehouse:
             raise ValueError('Не выбран склад для обеспечения заявки')

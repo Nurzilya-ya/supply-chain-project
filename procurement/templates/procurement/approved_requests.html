@@ -11,6 +11,7 @@
                     <th>Объект</th>
                     <th>Склад обеспечения</th>
                     <th>Статус обеспечения</th>
+                    <th>Действия</th>
                 </tr>
             </thead>
             <tbody>
@@ -33,6 +34,16 @@
                             {% endfor %}
                         </ul>
                         {% endwith %}
+                    </td>
+                    <td>
+                        {% if req.has_deficit %}
+                            <form method="post" action="{% url 'request_re_reserve' req.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-warning">Довыделить</button>
+                            </form>
+                        {% else %}
+                            <span class="badge bg-success">Готово к выдаче</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

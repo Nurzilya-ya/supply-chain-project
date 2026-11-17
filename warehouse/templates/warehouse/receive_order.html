@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}Приемка заказа {{ order.order_number }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Приемка заказа {{ order.order_number }}</h2>
+            <a href="{% url 'orders_to_receive' %}" class="btn btn-secondary">Назад</a>
+        </div>
+
+        <div class="alert alert-info">
+            <strong>Поставщик:</strong> {{ order.supplier.name }} <br>
+            <strong>Склад приемки:</strong> {{ order.warehouse.name }}
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <table class="table table-bordered align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Материал</th>
+                                <th>Заказано</th>
+                                <th>Уже принято</th>
+                                <th style="width: 200px;">Принять сейчас</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in order.items.all %}
+                            <tr>
+                                <td>
+                                    {{ item.material.name }} <br>
+                                    <small class="text-muted">{{ item.material.code }}</small>
+                                </td>
+                                <td>{{ item.quantity }} {{ item.material.get_unit_display }}</td>
+                                <td>{{ item.received_quantity }}</td>
+                                <td>
+                                    {% if item.received_quantity < item.quantity %}
+                                        <!-- Если еще не все принято, показываем поле ввода -->
+                                        <input type="number" 
+                                               name="item_{{ item.pk }}" 
+                                               class="form-control" 
+                                               step="0.001" 
+                                               min="0" 
+                                               max="{{ item.quantity|add:'-'|add:item.received_quantity }}"
+                                               placeholder="Введите кол-во">
+                                    {% else %}
+                                        <!-- Если уже всё принято -->
+                                        <span class="badge bg-success">Принято полностью</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <div class="text-end mt-4">
+                        <button type="submit" class="btn btn-success btn-lg">Зарегистрировать приемку</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

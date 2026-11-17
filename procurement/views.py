@@ -300,3 +300,33 @@ class ProcurementOrderUpdateView(LoginRequiredMixin, UserPassesTestMixin, Update
         return self.render_to_response(
             self.get_context_data(form=form, formset=formset)
         )
+
+
+class ReReserveRequestView(LoginRequiredMixin, UserPassesTestMixin, View):
+    def test_func(self):
+        user = self.request.user
+        return user.is_superuser or user.groups.filter(name='Supply Specialists').exists()
+
+    def post(self, request, pk):
+        req = get_object_or_404(MaterialRequest, pk=pk)
+
+        if req.status != 'approved':
+            messages.error(request, 'Эта заявка не находится в статусе согласования.')
+            return redirect('approved_requests')
+
+        if not req.warehouse:
+            messages.error(request, 'У заявки не выбран склад обеспечения.')
+            return redirect('approved_requests')
+
+        # Вызываем нашу бизнес-логику довыделения!
+        deficits = req.reserve_stock()
+
+        if deficits:
+            msg = 'Удалось довыделить материалы, но остался дефицит: '
+            for item, shortage in deficits:
+                msg += f'{item.material.name} (не хватает {shortage}), '
+            messages.warning(request, msg)
+        else:
+            messages.success(request, 'Все материалы по заявке полностью зарезервированы!')
+
+        return redirect('approved_requests')
