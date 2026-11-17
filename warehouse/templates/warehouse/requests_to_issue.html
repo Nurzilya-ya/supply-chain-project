@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Выдача материалов{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Заявки на выдачу (Согласованные)</h2>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        {% if requests %}
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>№ Заявки</th>
+                        <th>Объект</th>
+                        <th>Склад выдачи</th>
+                        <th>Материалы</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in requests %}
+                    <tr>
+                        <td><strong>{{ req.id }}</strong></td>
+                        <td>{{ req.production_site.name }}</td>
+                        <td>{{ req.warehouse.name }}</td>
+                        <td>
+                            <ul class="list-unstyled mb-0 small">
+                                {% for item in req.items.all %}
+                                    <li>{{ item.material.name }}: <strong>{{ item.reserved_quantity }}</strong></li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                        <td>
+                            <form method="post" action="{% url 'issue_request' req.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-primary">Выдать со склада</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="alert alert-success mb-0">
+                Нет заявок, ожидающих выдачи.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

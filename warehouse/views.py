@@ -4,8 +4,9 @@ from django.views import View
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from decimal import Decimal
-from procurement.models import ProcurementOrder, ProcurementOrderItem
+from procurement.models import ProcurementOrder, MaterialRequest, ProcurementOrderItem
 from .models import Stock, StockTransaction
+
 
 
 class WarehouseStockListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
@@ -106,3 +107,70 @@ class ReceiveOrderView(LoginRequiredMixin, UserPassesTestMixin, View):
 
         messages.success(request, f'Приемка по заказу {order.order_number} успешно зарегистрирована.')
         return redirect('orders_to_receive')
+
+
+# 1. Список согласованных заявок для выдачи
+class RequestsToIssueListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    model = MaterialRequest
+    template_name = 'warehouse/requests_to_issue.html'
+    context_object_name = 'requests'
+
+    def test_func(self):
+        user = self.request.user
+        return user.is_superuser or user.groups.filter(name='Warehouse Staff').exists()
+
+    def get_queryset(self):
+        # Показываем только те заявки, которые согласованы снабженцем
+        return MaterialRequest.objects.filter(status='approved').order_by('required_date')
+
+
+# 2. Обработка выдачи
+class IssueRequestView(LoginRequiredMixin, UserPassesTestMixin, View):
+    def test_func(self):
+        user = self.request.user
+        return user.is_superuser or user.groups.filter(name='Warehouse Staff').exists()
+
+    def post(self, request, pk):
+        req = get_object_or_404(MaterialRequest, pk=pk)
+
+        if req.status != 'approved':
+            messages.error(request, 'Эту заявку нельзя выдать (она не согласована).')
+            return redirect('requests_to_issue')
+
+        if not req.warehouse:
+            messages.error(request, 'У заявки не выбран склад обеспечения.')
+            return redirect('requests_to_issue')
+
+        # Проходим по всем строкам заявки
+        for item in req.items.all():
+            if item.reserved_quantity > 0:
+                # 1. Находим остаток на складе
+                stock = Stock.objects.filter(warehouse=req.warehouse, material=item.material).first()
+
+                if stock:
+                    # 2. Уменьшаем физический остаток и резерв
+                    stock.quantity -= item.reserved_quantity
+                    stock.reserved_quantity -= item.reserved_quantity
+                    stock.save()
+
+                    # 3. Создаем запись в журнале операций
+                    StockTransaction.objects.create(
+                        transaction_type='issue',
+                        warehouse=req.warehouse,
+                        material=item.material,
+                        quantity=item.reserved_quantity,
+                        created_by=request.user,
+                        request_item=item,
+                        comment=f"Выдача по заявке №{req.pk}"
+                    )
+
+                    # 4. Обнуляем резерв в строке заявки (товар ушел)
+                    item.reserved_quantity = 0
+                    item.save()
+
+        # 5. Закрываем заявку
+        req.status = 'fulfilled'
+        req.save()
+
+        messages.success(request, f'Материалы по заявке №{req.pk} успешно выданы со склада!')
+        return redirect('requests_to_issue')
