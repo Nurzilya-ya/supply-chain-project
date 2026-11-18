@@ -22,8 +22,12 @@
                     <li class="nav-item"><a class="nav-link" href="/">Главная</a></li>
 
                     {% if user.is_authenticated %}
-                        <!-- Доступно всем: Мои заявки -->
-                        <li class="nav-item"><a class="nav-link" href="{% url 'my_requests' %}">Мои заявки</a></li>
+                        <!-- Доступно сотрудникам: Мои заявки -->
+                        {% for group in user.groups.all %}
+                            {% if group.name == 'Production Employees' %}
+                                <li class="nav-item"><a class="nav-link" href="{% url 'my_requests' %}">Мои заявки</a></li>
+                            {% endif %}
+                        {% endfor %}
 
                         <!-- Доступно Снабженцам: Заявки на рассмотрение -->
                         {% if user.is_superuser or 'Supply Specialists' in user.groups.all|stringformat:"s" or user.groups.all %}
