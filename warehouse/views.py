@@ -6,7 +6,9 @@ from django.contrib import messages
 from decimal import Decimal
 from procurement.models import ProcurementOrder, MaterialRequest, ProcurementOrderItem
 from .models import Stock, StockTransaction
-
+from django.views.generic.edit import FormView
+from django.urls import reverse_lazy
+from .forms import StockTransactionForm
 
 
 class WarehouseStockListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
@@ -174,3 +176,61 @@ class IssueRequestView(LoginRequiredMixin, UserPassesTestMixin, View):
 
         messages.success(request, f'Материалы по заявке №{req.pk} успешно выданы со склада!')
         return redirect('requests_to_issue')
+
+class StockTransactionCreateView(LoginRequiredMixin, UserPassesTestMixin, FormView):
+    template_name = 'warehouse/transaction_form.html'
+    form_class = StockTransactionForm
+    success_url = reverse_lazy('warehouse_stocks') # После сохранения кидаем на страницу остатков
+
+    def test_func(self):
+        user = self.request.user
+        return user.is_superuser or user.groups.filter(name='Warehouse Staff').exists()
+
+    def form_valid(self, form):
+        # Получаем данные из формы, но пока не сохраняем в базу
+        transaction = form.save(commit=False)
+        transaction.created_by = self.request.user
+
+        source_stock = Stock.objects.filter(
+            warehouse=transaction.warehouse,
+            material=transaction.material
+        ).first()
+
+        # Проверка: есть ли вообще такой материал на этом складе и хватает ли его (с учетом резерва)
+        if not source_stock or source_stock.available_quantity < transaction.quantity:
+            form.add_error('quantity', 'На выбранном складе недостаточно доступного материала для этой операции.')
+            return self.form_invalid(form)
+
+        # --- ЛОГИКА СПИСАНИЯ ---
+        if transaction.transaction_type == 'write_off':
+            source_stock.quantity -= transaction.quantity
+            source_stock.save()
+            transaction.save() # Сохраняем запись в журнале
+            messages.success(self.request, f'Материал "{transaction.material.name}" списан в количестве {transaction.quantity}.')
+
+        # --- ЛОГИКА ПЕРЕМЕЩЕНИЯ ---
+        elif transaction.transaction_type == 'transfer':
+            if not transaction.destination_warehouse:
+                form.add_error('destination_warehouse', 'Для перемещения нужно выбрать склад-получатель.')
+                return self.form_invalid(form)
+            if transaction.warehouse == transaction.destination_warehouse:
+                form.add_error('destination_warehouse', 'Склады отправки и получения должны различаться.')
+                return self.form_invalid(form)
+
+            # 1. Списываем с исходного склада
+            source_stock.quantity -= transaction.quantity
+            source_stock.save()
+
+            # 2. Добавляем на склад-получатель (если там еще нет этого материала, создаем запись)
+            dest_stock, created = Stock.objects.get_or_create(
+                warehouse=transaction.destination_warehouse,
+                material=transaction.material,
+                defaults={'quantity': 0, 'reserved_quantity': 0}
+            )
+            dest_stock.quantity += transaction.quantity
+            dest_stock.save()
+
+            transaction.save() # Сохраняем запись в журнале
+            messages.success(self.request, f'Материал "{transaction.material.name}" перемещен.')
+
+        return super().form_valid(form)

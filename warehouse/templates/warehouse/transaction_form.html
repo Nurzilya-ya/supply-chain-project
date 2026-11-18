@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}Складская операция{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-secondary text-white">
+                <h4 class="mb-0">Новая складская операция</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label class="form-label text-primary fw-bold">Тип операции</label>
+                        {{ form.transaction_type }}
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Склад отправки (или списания)</label>
+                            {{ form.warehouse }}
+                            {{ form.warehouse.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Склад-получатель (только для перемещения)</label>
+                            {{ form.destination_warehouse }}
+                            {{ form.destination_warehouse.errors }}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Материал</label>
+                            {{ form.material }}
+                            {{ form.material.errors }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Количество</label>
+                            {{ form.quantity }}
+                            {{ form.quantity.errors }}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Комментарий / Причина</label>
+                        {{ form.comment }}
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'warehouse_stocks' %}" class="btn btn-secondary">Отмена</a>
+                        <button type="submit" class="btn btn-primary">Выполнить операцию</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
