@@ -61,4 +61,56 @@
         
     </div>
 </div>
+<div class="card shadow-sm mt-4">
+            <div class="card-header bg-white border-0 pt-4 pb-0">
+                <h5 class="fw-bold"><i class="fas fa-history text-muted me-2"></i>История заявки</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <!-- 1. Создание -->
+                    <li class="list-group-item px-0 border-0">
+                        <div class="d-flex">
+                            <div class="me-3 text-secondary"><i class="fas fa-file-alt fa-lg"></i></div>
+                            <div>
+                                <span class="badge bg-secondary mb-1">Создана</span><br>
+                                <strong>{{ request_obj.created_by.username }}</strong>
+                                <span class="text-muted small">{{ request_obj.created_at|date:"d.m.Y H:i" }}</span>
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- 2. Согласование -->
+                    {% if request_obj.approved_by %}
+                    <li class="list-group-item px-0 border-0">
+                        <div class="d-flex">
+                            <div class="me-3 text-success"><i class="fas fa-check-circle fa-lg"></i></div>
+                            <div>
+                                <span class="badge bg-success mb-1">Согласована</span><br>
+                                <strong>{{ request_obj.approved_by.username }}</strong>
+                                <span class="text-muted small">{{ request_obj.approved_at|date:"d.m.Y H:i" }}</span><br>
+                                <small class="text-muted">Склад: {{ request_obj.warehouse.name }}</small>
+                            </div>
+                        </div>
+                    </li>
+                    {% endif %}
+
+                    <!-- 3. Выдача -->
+                    {% for tx in transactions %}
+                        {% if tx.transaction_type == 'issue' %}
+                        <li class="list-group-item px-0 border-0">
+                            <div class="d-flex">
+                                <div class="me-3 text-primary"><i class="fas fa-truck-loading fa-lg"></i></div>
+                                <div>
+                                    <span class="badge bg-primary mb-1">Выдано со склада</span><br>
+                                    <strong>{{ tx.created_by.username }}</strong>
+                                    <span class="text-muted small">{{ tx.created_at|date:"d.m.Y H:i" }}</span><br>
+                                    <small class="text-muted">Выдано: {{ tx.material.name }} — {{ tx.quantity }} {{ tx.material.get_unit_display }}</small>
+                                </div>
+                            </div>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
 {% endblock %}

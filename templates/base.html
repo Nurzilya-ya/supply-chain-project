@@ -54,6 +54,7 @@
                         {% for group in user.groups.all %}
                             {% if group.name == 'Managers' %}
                                 <li class="nav-item"><a class="nav-link text-success" href="{% url 'analytics_dashboard' %}">Аналитика</a></li>
+                                <li class="nav-item"><a class="nav-link text-success" href="{% url 'all_requests' %}">Все заявки</a></li>
                             {% endif %}
                         {% endfor %}
 
@@ -65,6 +66,7 @@
                             <li class="nav-item"><a class="nav-link text-warning" href="{% url 'orders_to_receive' %}">Поставки</a></li>
                             <li class="nav-item"><a class="nav-link text-success" href="{% url 'analytics_dashboard' %}">Аналитика</a></li>
                             <li class="nav-item"><a class="nav-link text-success" href="{% url 'requests_to_issue' %}">Выдача</a></li>
+                            <li class="nav-item"><a class="nav-link text-success" href="{% url 'all_requests' %}">Все заявки</a></li>
                         {% endif %}
                     {% endif %}
                 </ul>

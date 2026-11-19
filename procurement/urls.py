@@ -17,4 +17,5 @@ urlpatterns = [
     path('procurement-orders/create/', views.ProcurementOrderCreateView.as_view(), name='procurement_order_create'),
     path('procurement-orders/<int:pk>/edit/', views.ProcurementOrderUpdateView.as_view(), name='procurement_order_edit'),
     path('procurement-orders/<int:pk>/confirm/', views.ConfirmProcurementOrderView.as_view(), name='procurement_order_confirm'),
+    path('all-requests/', views.AllRequestsListView.as_view(), name='all_requests'),
 ]

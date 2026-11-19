@@ -8,10 +8,9 @@ from .forms import ProcurementOrderForm, ProcurementOrderItemFormSet
 from .models import MaterialRequest
 from django.shortcuts import redirect
 from django.views import View
-from warehouse.models import Warehouse
+from warehouse.models import Warehouse, StockTransaction
 from django.shortcuts import get_object_or_404
 from .models import ProcurementOrder
-
 
 class MyRequestsListView(LoginRequiredMixin, ListView):
     model = MaterialRequest
@@ -91,12 +90,21 @@ class MaterialRequestDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailV
     context_object_name = 'request_obj'
 
     def test_func(self):
-        # Смотреть заявку может автор, снабженец или админ
         req = self.get_object()
         user = self.request.user
         if user.is_superuser or req.created_by == user:
             return True
-        return user.groups.filter(name='Supply Specialists').exists()
+
+        allowed_groups = ['Supply Specialists', 'Managers']
+        return user.groups.filter(name__in=allowed_groups).exists()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Находим все складские операции по строкам этой заявки
+        context['transactions'] = StockTransaction.objects.filter(
+            request_item__request=self.object
+        ).order_by('created_at')
+        return context
 
 # 2. Отправка заявки в снабжение (смена статуса)
 class SubmitRequestView(LoginRequiredMixin, View):
@@ -149,6 +157,9 @@ class ApproveRequestView(LoginRequiredMixin, UserPassesTestMixin, View):
 
         req.warehouse = get_object_or_404(Warehouse, pk=warehouse_id)
         req.status = 'approved'
+        from django.utils import timezone
+        req.approved_by = request.user
+        req.approved_at = timezone.now()
         req.save()
 
         # ВЫЗЫВАЕМ НАШУ БИЗНЕС-ЛОГИКУ РЕЗЕРВИРОВАНИЯ!
@@ -363,3 +374,18 @@ class ReReserveRequestView(LoginRequiredMixin, UserPassesTestMixin, View):
             messages.success(request, 'Все материалы по заявке полностью зарезервированы!')
 
         return redirect('approved_requests')
+
+class AllRequestsListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    model = MaterialRequest
+    template_name = 'procurement/all_requests.html'
+    context_object_name = 'requests'
+    paginate_by = 20
+
+    def test_func(self):
+        user = self.request.user
+        # Доступ только Менеджерам и Админам
+        return user.is_superuser or user.groups.filter(name='Managers').exists()
+
+    def get_queryset(self):
+        # Показываем вообще все заявки, отсортированные по дате создания
+        return MaterialRequest.objects.all().select_related('created_by', 'approved_by', 'warehouse').order_by('-created_at')

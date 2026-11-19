@@ -49,6 +49,19 @@ class MaterialRequest(models.Model):
         default='draft',
         verbose_name='Статус',
     )
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_requests',
+        verbose_name='Согласовал',
+    )
+    approved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата согласования',
+    )
     purpose = models.TextField(
         verbose_name='Назначение заявки',
         help_text='Например: плановый ремонт насосной станции, причина заявки и т.п.',
