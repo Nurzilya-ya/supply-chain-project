@@ -16,8 +16,11 @@ def home(request):
     is_supply = request.user.is_superuser or request.user.groups.filter(name='Supply Specialists').exists()
 
     if is_supply:
-        low_stock_items = Stock.objects.filter(quantity__lte=10).select_related('material', 'warehouse')
-
+        # Берем позиции, где остаток меньше 10
+        low_stock_items = list(Stock.objects.filter(quantity__lt=10).select_related('material', 'warehouse'))
+        # Для каждой позиции считаем, сколько не хватает до 10 (условный минимум)
+        for item in low_stock_items:
+            item.recommended_qty = 10 - item.quantity
     context = {
         'total_materials': total_materials,
         'active_requests': active_requests,

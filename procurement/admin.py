@@ -5,7 +5,6 @@ from .models import (
     RequestItem,
     ProcurementOrder,
     ProcurementOrderItem,
-    PlannedRequirement,
 )
 
 
@@ -36,9 +35,3 @@ class ProcurementOrderAdmin(admin.ModelAdmin):
     list_filter = ('status', 'supplier', 'warehouse')
     search_fields = ('order_number', 'supplier__name')
     inlines = [ProcurementOrderItemInline]
-
-@admin.register(PlannedRequirement)
-class PlannedRequirementAdmin(admin.ModelAdmin):
-    list_display = ('material', 'quantity', 'target_date', 'production_site', 'status')
-    list_filter = ('status', 'production_site', 'target_date')
-    search_fields = ('material__name', 'material__code')

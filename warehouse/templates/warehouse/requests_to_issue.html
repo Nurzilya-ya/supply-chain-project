@@ -32,10 +32,18 @@
                             </ul>
                         </td>
                         <td>
-                            <form method="post" action="{% url 'issue_request' req.pk %}">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-primary">Выдать со склада</button>
-                            </form>
+                            {% if req.has_deficit %}
+                                <!-- Если есть дефицит, показываем бейдж вместо кнопки -->
+                                <span class="badge bg-warning text-dark py-2 px-3">
+                                    ⏳ Ожидает довыделения (есть дефицит)
+                                </span>
+                            {% else %}
+                                <!-- Если всё готово, показываем кнопку -->
+                                <form method="post" action="{% url 'issue_request' req.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-primary">Выдать со склада</button>
+                                </form>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

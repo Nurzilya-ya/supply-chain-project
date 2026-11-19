@@ -57,11 +57,16 @@
                 <div class="row">
                     {% for stock in low_stock_items %}
                         <div class="col-md-4 mb-2">
-                            <div class="alert alert-warning mb-0 py-2">
-                                <strong>{{ stock.material.name }}</strong><br>
-                                <small>Склад: {{ stock.warehouse.name }}</small><br>
-                                Остаток: <span class="badge bg-danger">{{ stock.quantity }}</span>
-                            </div>
+                            <!-- Ссылка на создание закупки с параметрами -->
+                            <a href="{% url 'procurement_order_create' %}?material={{ stock.material.id }}&warehouse={{ stock.warehouse.id }}&quantity={{ stock.recommended_qty }}"
+                               class="text-decoration-none">
+                                <div class="alert alert-warning mb-0 py-2 h-100 hover-shadow" style="border-left: 4px solid #dc3545;">
+                                    <strong>{{ stock.material.name }}</strong><br>
+                                    <small>Склад: {{ stock.warehouse.name }}</small><br>
+                                    Остаток: <span class="badge bg-danger">{{ stock.quantity }}</span>
+                                    <span class="float-end small text-primary mt-2">Заказать →</span>
+                                </div>
+                            </a>
                         </div>
                     {% endfor %}
                 </div>

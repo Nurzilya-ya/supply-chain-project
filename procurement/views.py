@@ -214,9 +214,29 @@ class ProcurementOrderCreateView(LoginRequiredMixin, UserPassesTestMixin, Create
         user = self.request.user
         return user.is_superuser or user.groups.filter(name='Supply Specialists').exists()
 
+    def get_initial(self):
+        initial = super().get_initial()
+        warehouse_id = self.request.GET.get('warehouse')
+        if warehouse_id:
+            initial['warehouse'] = warehouse_id
+        return initial
+
+    # ПЕРЕДАЧА НАЧАЛЬНЫХ ДАННЫХ ДЛЯ ТАБЛИЦЫ (ФОРМСЕТА)
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['formset'] = ProcurementOrderItemFormSet()
+
+        if self.request.method == 'GET':
+            material_id = self.request.GET.get('material')
+            qty = self.request.GET.get('quantity')
+
+            formset_initial = [{}]
+            if material_id:
+                formset_initial = [{'material': material_id, 'quantity': qty}]
+
+            context['formset'] = ProcurementOrderItemFormSet(initial=formset_initial)
+        else:
+            context['formset'] = ProcurementOrderItemFormSet()
+
         return context
 
     def post(self, request, *args, **kwargs):
@@ -230,16 +250,15 @@ class ProcurementOrderCreateView(LoginRequiredMixin, UserPassesTestMixin, Create
             return self.form_invalid(form, formset)
 
     def form_valid(self, form, formset):
-        # Заполняем скрытые поля
         form.instance.created_by = self.request.user
-        form.instance.status = 'draft'  # Сразу ставим статус "Заказано поставщику"
+        form.instance.status = 'draft'
 
         self.object = form.save()
 
         formset.instance = self.object
         formset.save()
 
-        messages.success(self.request, f'Заказ {self.object.order_number} успешно создан!')
+        messages.success(self.request, f'Заказ {self.object.order_number} сохранен как черновик.')
         return super().form_valid(form)
 
     def form_invalid(self, form, formset):
@@ -255,9 +274,23 @@ class ConfirmProcurementOrderView(LoginRequiredMixin, UserPassesTestMixin, View)
     def post(self, request, pk):
         order = get_object_or_404(ProcurementOrder, pk=pk)
         if order.status == 'draft':
+            # ПРОВЕРКА 1: Заполнены ли поставщик и склад?
+            if not order.supplier or not order.warehouse:
+                messages.error(request,
+                               f'Нельзя отправить заказ {order.order_number}. Выберите поставщика и склад назначения (нажмите "Редактировать").')
+                return redirect('procurement_orders')
+
+            # ПРОВЕРКА 2: Есть ли в заказе материалы?
+            if order.items.count() == 0:
+                messages.error(request,
+                               f'Нельзя отправить пустой заказ {order.order_number}. Добавьте хотя бы один материал.')
+                return redirect('procurement_orders')
+
+            # Если проверки пройдены — отправляем
             order.status = 'ordered'
             order.save()
             messages.success(request, f'Заказ {order.order_number} отправлен поставщику!')
+
         return redirect('procurement_orders')
 
 class ProcurementOrderUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):

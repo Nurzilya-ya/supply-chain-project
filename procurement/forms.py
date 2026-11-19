@@ -2,6 +2,7 @@ from django import forms
 from django.forms import inlineformset_factory
 from .models import MaterialRequest, RequestItem
 from .models import ProcurementOrder, ProcurementOrderItem
+from django.db.models import F
 
 # 1. Форма для самой заявки (шапка)
 class MaterialRequestForm(forms.ModelForm):
@@ -39,15 +40,46 @@ class ProcurementOrderForm(forms.ModelForm):
         }
 
 # 2. Форма для строк заказа (материалы)
+class ProcurementOrderItemForm(forms.ModelForm):
+    class Meta:
+        model = ProcurementOrderItem
+        fields = ('material', 'quantity', 'unit_price', 'request_item')
+        widgets = {
+            'material': forms.Select(attrs={'class': 'form-select'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control'}),
+            'unit_price': forms.NumberInput(attrs={'class': 'form-control'}),
+            'request_item': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # ФИЛЬТРАЦИЯ: показываем только те строки заявок, где есть дефицит!
+        if 'request_item' in self.fields:
+            self.fields['request_item'].queryset = RequestItem.objects.filter(
+                request__status='approved', # Заявка согласована
+                reserved_quantity__lt=F('quantity') # Резерв меньше, чем просят
+            )
+
+    # ПРОВЕРКА КОЛИЧЕСТВА
+    def clean_quantity(self):
+        quantity = self.cleaned_data.get('quantity')
+        # Если поле пустое (например, пустая строка в формсете), просто пропускаем
+        if quantity is not None and quantity <= 0:
+            raise forms.ValidationError("Количество должно быть строго больше нуля.")
+        return quantity
+
+    # ПРОВЕРКА ЦЕНЫ
+    def clean_unit_price(self):
+        unit_price = self.cleaned_data.get('unit_price')
+        # Цена может быть 0 (например, если поставка бесплатная/гарантийная),
+        # но не может быть отрицательной
+        if unit_price is not None and unit_price <= 0:
+            raise forms.ValidationError("Цена не может быть отрицательной.")
+        return unit_price
+
 ProcurementOrderItemFormSet = inlineformset_factory(
     ProcurementOrder,
     ProcurementOrderItem,
-    fields=('material', 'quantity', 'unit_price', 'request_item'),
+    form=ProcurementOrderItemForm, # Используем нашу кастомную форму
     extra=5,
-    widgets={
-        'material': forms.Select(attrs={'class': 'form-select'}),
-        'quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
-        'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-        'request_item': forms.Select(attrs={'class': 'form-select'}),
-    }
 )

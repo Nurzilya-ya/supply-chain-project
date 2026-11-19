@@ -139,6 +139,11 @@ class IssueRequestView(LoginRequiredMixin, UserPassesTestMixin, View):
             messages.error(request, 'Эту заявку нельзя выдать (она не согласована).')
             return redirect('requests_to_issue')
 
+        if req.has_deficit:
+            messages.error(request,
+                           'ОШИБКА: В заявке есть дефицит материалов. Дождитесь, пока снабженец закупит и довыделит их.')
+            return redirect('requests_to_issue')
+
         if not req.warehouse:
             messages.error(request, 'У заявки не выбран склад обеспечения.')
             return redirect('requests_to_issue')
