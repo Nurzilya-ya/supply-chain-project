@@ -12,5 +12,13 @@ class User(AbstractUser):
         verbose_name='Производственный объект'
     )
 
+    warehouse = models.ForeignKey(
+        'warehouse.Warehouse',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='employees',
+        verbose_name='Склад (для кладовщика)'
+    )
     def __str__(self):
         return self.username

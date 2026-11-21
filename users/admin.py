@@ -7,6 +7,6 @@ from .models import User
 class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
         ('Производственная информация', {
-            'fields': ('production_site',)
+            'fields': ('production_site', 'warehouse')
         }),
     )

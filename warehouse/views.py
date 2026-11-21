@@ -24,7 +24,13 @@ class WarehouseStockListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
         return user.groups.filter(name__in=['Warehouse Staff', 'Supply Specialists']).exists()
 
     def get_queryset(self):
-        return Stock.objects.filter(quantity__gt=0).select_related('warehouse', 'material')
+        user = self.request.user
+        queryset = Stock.objects.filter(quantity__gt=0)
+        # Если это кладовщик и у него указан склад, показываем только его
+        if user.groups.filter(name='Warehouse Staff').exists() and user.warehouse:
+            queryset = queryset.filter(warehouse=user.warehouse)
+
+        return queryset.select_related('warehouse', 'material')
 
 class OrdersToReceiveListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
     model = ProcurementOrder
@@ -37,10 +43,13 @@ class OrdersToReceiveListView(LoginRequiredMixin, UserPassesTestMixin, ListView)
         return user.is_superuser or user.groups.filter(name='Warehouse Staff').exists()
 
     def get_queryset(self):
-        # Показываем только те заказы, которые ждем (Заказано или Частично поставлено)
-        return ProcurementOrder.objects.filter(
-            status__in=['ordered', 'partially_delivered']
-        ).order_by('expected_delivery_date')
+        user = self.request.user
+        queryset = ProcurementOrder.objects.filter(status__in=['ordered', 'partially_delivered'])
+
+        if user.groups.filter(name='Warehouse Staff').exists() and user.warehouse:
+            queryset = queryset.filter(warehouse=user.warehouse)
+
+        return queryset.order_by('expected_delivery_date')
 
 
 class ReceiveOrderView(LoginRequiredMixin, UserPassesTestMixin, View):
@@ -56,7 +65,10 @@ class ReceiveOrderView(LoginRequiredMixin, UserPassesTestMixin, View):
     def post(self, request, pk):
         # Обрабатываем введенные данные
         order = get_object_or_404(ProcurementOrder, pk=pk)
-
+        if request.user.groups.filter(name='Warehouse Staff').exists() and request.user.warehouse:
+            if order.warehouse != request.user.warehouse:
+                messages.error(request, 'У вас нет прав на операции с этим складом.')
+                return redirect('orders_to_receive')
         for item in order.items.all():
             # Получаем количество, которое кладовщик ввел для этого материала
             received_str = request.POST.get(f'item_{item.pk}')
@@ -122,8 +134,15 @@ class RequestsToIssueListView(LoginRequiredMixin, UserPassesTestMixin, ListView)
         return user.is_superuser or user.groups.filter(name='Warehouse Staff').exists()
 
     def get_queryset(self):
-        # Показываем только те заявки, которые согласованы снабженцем
-        return MaterialRequest.objects.filter(status='approved').order_by('required_date')
+        user = self.request.user
+        # Берем только согласованные заявки
+        queryset = MaterialRequest.objects.filter(status='approved')
+
+        # Если это кладовщик с назначенным складом - фильтруем
+        if user.groups.filter(name='Warehouse Staff').exists() and user.warehouse:
+            queryset = queryset.filter(warehouse=user.warehouse)
+
+        return queryset.order_by('required_date')
 
 
 # 2. Обработка выдачи
@@ -134,7 +153,10 @@ class IssueRequestView(LoginRequiredMixin, UserPassesTestMixin, View):
 
     def post(self, request, pk):
         req = get_object_or_404(MaterialRequest, pk=pk)
-
+        if request.user.groups.filter(name='Warehouse Staff').exists() and request.user.warehouse:
+            if req.warehouse != request.user.warehouse:
+                messages.error(request, 'У вас нет прав на выдачу с этого склада.')
+                return redirect('requests_to_issue')
         if req.status != 'approved':
             messages.error(request, 'Эту заявку нельзя выдать (она не согласована).')
             return redirect('requests_to_issue')
