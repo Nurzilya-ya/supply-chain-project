@@ -1,14 +1,14 @@
-from django.views.generic import ListView
+from django.views.generic import ListView, CreateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views import View
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from decimal import Decimal
 from procurement.models import ProcurementOrder, MaterialRequest, ProcurementOrderItem
-from .models import Stock, StockTransaction
+from .models import Stock, StockTransaction, Material
 from django.views.generic.edit import FormView
 from django.urls import reverse_lazy
-from .forms import StockTransactionForm
+from .forms import StockTransactionForm, MaterialForm
 
 
 class WarehouseStockListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
@@ -260,4 +260,35 @@ class StockTransactionCreateView(LoginRequiredMixin, UserPassesTestMixin, FormVi
             transaction.save() # Сохраняем запись в журнале
             messages.success(self.request, f'Материал "{transaction.material.name}" перемещен.')
 
+        return super().form_valid(form)
+
+# Справочник материалов
+class MaterialListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    model = Material
+    template_name = 'warehouse/material_list.html'
+    context_object_name = 'materials'
+    paginate_by = 20
+
+    def test_func(self):
+        user = self.request.user
+        # ТОЛЬКО снабженцы и админ
+        return user.is_superuser or user.groups.filter(name='Supply Specialists').exists()
+
+    def get_queryset(self):
+        return Material.objects.all().order_by('category', 'name')
+
+# Создание материала
+class MaterialCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
+    model = Material
+    form_class = MaterialForm
+    template_name = 'warehouse/material_form.html'
+    success_url = reverse_lazy('material_list')
+
+    def test_func(self):
+        user = self.request.user
+        # ТОЛЬКО снабженцы и админ
+        return user.is_superuser or user.groups.filter(name='Supply Specialists').exists()
+
+    def form_valid(self, form):
+        messages.success(self.request, f'Материал "{form.instance.name}" успешно добавлен в справочник.')
         return super().form_valid(form)

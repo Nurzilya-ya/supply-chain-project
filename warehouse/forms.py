@@ -1,5 +1,6 @@
 from django import forms
-from .models import StockTransaction
+from .models import StockTransaction, Material
+
 
 
 class StockTransactionForm(forms.ModelForm):
@@ -26,3 +27,16 @@ class StockTransactionForm(forms.ModelForm):
             ('write_off', 'Списание (порча, утиль)')
         ]
         self.fields['destination_warehouse'].required = False
+
+class MaterialForm(forms.ModelForm):
+    class Meta:
+        model = Material
+        fields = ['name', 'code', 'category', 'unit', 'description', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Например: FLT-002'}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
+            'unit': forms.Select(attrs={'class': 'form-select'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }

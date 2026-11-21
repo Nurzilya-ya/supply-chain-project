@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Справочник МТР{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Справочник материалов (МТР)</h2>
+    <a href="{% url 'material_create' %}" class="btn btn-primary">+ Добавить материал</a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Код</th>
+                    <th>Наименование</th>
+                    <th>Категория</th>
+                    <th>Ед. изм.</th>
+                    <th>Статус</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for material in materials %}
+                <tr>
+                    <td><strong>{{ material.code }}</strong></td>
+                    <td>{{ material.name }}</td>
+                    <td>{{ material.get_category_display }}</td>
+                    <td>{{ material.get_unit_display }}</td>
+                    <td>
+                        {% if material.is_active %}
+                            <span class="badge bg-success">Активен</span>
+                        {% else %}
+                            <span class="badge bg-secondary">В архиве</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

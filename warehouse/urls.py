@@ -8,4 +8,6 @@ urlpatterns = [
     path('requests-to-issue/', views.RequestsToIssueListView.as_view(), name='requests_to_issue'),
     path('requests-to-issue/<int:pk>/', views.IssueRequestView.as_view(), name='issue_request'),
     path('transactions/create/', views.StockTransactionCreateView.as_view(), name='transaction_create'),
+    path('materials/', views.MaterialListView.as_view(), name='material_list'),
+    path('materials/create/', views.MaterialCreateView.as_view(), name='material_create'),
 ]
